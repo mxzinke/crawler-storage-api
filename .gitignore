@@ -1,5 +1,6 @@
 ## VS-Code
 .vscode/
+build/
 
 ## Env
 .env
