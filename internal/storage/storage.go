@@ -9,20 +9,13 @@ import (
 	"github.com/minio/minio-go"
 )
 
-// Client holds data about the connection to the S3 storage.
-type Client struct {
-	actor   *minio.Client
-	buckets []*Bucket
-}
-
-// Bucket holds the data about the bucket to do actions on it.
-type Bucket struct {
-	name    string
-	storage Client
+// S3Client holds data about the connection to the S3 storage.
+type S3Client struct {
+	actor *minio.Client
 }
 
 // New creates a new client to access the s3 storage.
-func New() *Client {
+func New() *S3Client {
 	err := checkRequiredEnv()
 	if err != nil {
 		log.Fatalln(err)
@@ -32,15 +25,19 @@ func New() *Client {
 	accessKeyID := os.Getenv("STORAGE_ACCESS_KEY_ID")
 	accessSecret := os.Getenv("STORAGE_ACCESS_SECRET")
 	useSSL := os.Getenv("STORAGE_USE_SSL") == "true" || os.Getenv("STORAGE_USE_SSL") == "on"
+	bucketName := os.Getenv("STORAGE_BUCKET")
 
-	s3Client, err := minio.New(endpoint, accessKeyID, accessSecret, useSSL)
-
+	minioClient, err := minio.New(endpoint, accessKeyID, accessSecret, useSSL)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	return &Client{
-		actor: s3Client,
+	if found, _ := minioClient.BucketExists(bucketName); !found {
+		log.Fatalf("Bucket %s not found!", bucketName)
+	}
+
+	return &S3Client{
+		actor: minioClient,
 	}
 }
 
@@ -50,6 +47,7 @@ var RequiredEnv = [...]string{
 	"STORAGE_ACCESS_KEY_ID",
 	"STORAGE_ACCESS_SECRET",
 	"STORAGE_USE_SSL",
+	"STORAGE_BUCKET",
 }
 
 func checkRequiredEnv() error {
